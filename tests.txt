@@ -1,0 +1,137 @@
+Let: 
+(let ((a 2) (b 4)) (+ a b))
+(let ((a (+ 2 6)) (b 4)) (+ a b))
+
+If: 
+(if (= 6 10) 15 (* 3 6))
+(if (= 6 (* 5 2)) 15 (* 3 6))
+(if (= 6 (* (+ 3 2) 2)) 15 (* 3 6))
+
+Recursive:
+(let ((test (fun s (n result) (tfun (int int) int) (if (= n 0) result (s (+ n -1) (+ result n)))))) (test 10 1))
+
+
+Other: 
+(+ (* 4 4) 10)
+(+ (* 4 (* 5 5)) 10)
+(+ 4 (bp (* 5 5)))
+(+ 4 (+ 4 (bp (* 5 (* 6 5)))))
+(+ 4 (bp (+ 4 (* 5 (* 6 5)))))
+(+ 4 (bp (+ 4 (* 5 (bp (* 6 5))))))
+
+
+
+	    case EIf(ec,et,ee) => {
+	      if(isDebug && firstEval){
+	        // Print the original statement
+		val expString = (new EIf(ec,et,ee)).toString()
+		println("\n" +expString)
+	      }
+
+          
+	      if(isDebug){
+	        val ifStr = "if " +ec.evalTail(currEnv, inDebugMode, false, newInto).getBool() +" then { " +et +" } else { " +ee +" }"
+	        println("\n" +ifStr)
+                
+                print("\ninto or bp: ")
+                var input = scala.io.StdIn.readLine()
+		   
+	        if(input == "into"){
+		   newInto = true
+		}
+		else{
+		   inDebugMode = false
+		   newInto = false
+		}
+	      }
+	      
+              val ev = ec.evalTail(currEnv, inDebugMode, false, newInto)
+	      
+              if (!ev.getBool()) {
+                currExp = ee
+              } else {
+                currExp = et
+              } 
+	    }
+
+	    case EVector(es) => {
+               val vs = es.map((e:Exp) => {e.evalTail(currEnv, inDebugMode, firstEval, newInto)})
+               return new VVector(vs)
+	    }
+
+	    case EApply(f,args) => {
+	      // println("HERE: "+(new EApply(f,args)).toString())
+	       
+	       if(isDebug && newInto){
+	          val exprStr = (new EApply(f,args)).toString()
+		  if(exprStr != prevExp){
+		      println("\n" +exprStr)  //if issue falls here
+
+                      print("\ninto or bp for expression " +exprStr +": ")
+                      var input = scala.io.StdIn.readLine()
+		   
+	              if(input == "into"){
+		        newInto = true
+		      }
+		      else{
+		        inDebugMode = false
+		        newInto = false
+		      }
+	         }
+		 // Store this expression
+	         prevExp = exprStr
+	      }
+      /*         if(isDebug && firstEval){
+		  val exprStr = (new EApply(f,args)).toString()
+		  println("\n" +exprStr)  //if issue falls here
+		  
+		  print("\ninto or bp for expression " +exprStr +": ")
+                  var input = scala.io.StdIn.readLine()
+		   
+	          if(input == "into"){
+		    newInto = true
+		  }
+		  else{
+		    inDebugMode = false
+		    newInto = false
+		  }
+	       } */
+	       
+	       
+	       val vf = f.evalTail(currEnv,inDebugMode, false, newInto)
+               val vargs = args.map((e:Exp) => e.evalTail(currEnv, inDebugMode, false, newInto))
+	       	 
+               if (vf.isPrimOp()) {
+	         val returnVal = vf.applyOper(vargs)
+		 
+		 if(isDebug && newInto){
+		   print("\ninto or bp for expression "+(new EApply(f,args)).toString() +": ")
+                   var input = scala.io.StdIn.readLine()
+		   
+	           if(input == "into"){
+		      var str =  vargs mkString " "
+                      println("\n(" +f + " " +str + ")")
+		      newInto = true
+		      
+		      println("Value: "+returnVal)
+		   }
+		   else{
+		      inDebugMode = false
+		      newInto = false
+		   }
+		 }
+		 
+                 return returnVal
+		 
+               } else {
+                 // defined function
+                 // push the vf closure as the value bound to identifier self
+                 var new_env = vf.getEnv().push(vf.getSelf(),vf)
+                 for ((p,v) <- vf.getParams().zip(vargs)) {
+                    new_env = new_env.push(p,v)
+                 }
+                 currEnv = new_env
+                 currExp = vf.getBody()
+               }
+	     }
+	     
